@@ -1,33 +1,31 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 import openai
 import os
 
 app = FastAPI()
 
-# Lấy API key từ biến môi trường
+# Đảm bảo khóa API được nạp từ biến môi trường
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.post("/generate-review")
 async def generate_review(req: Request):
-    try:
-        data = await req.json()
-        name = data.get("name")
-        description = data.get("description")
+    data = await req.json()
+    name = data.get("name", "")
+    description = data.get("description", "")
+    
+    prompt = f"Viết một đánh giá 5 sao, thân thiện cho sản phẩm: {name}. Mô tả: {description}."
 
-        # Kiểm tra dữ liệu đầu vào
-        if not name or not description:
-            return JSONResponse(status_code=400, content={"error": "Thiếu tên hoặc mô tả sản phẩm"})
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # hoặc gpt-4 nếu bạn có quyền truy cập
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
 
-        # Kiểm tra API key
-        if not openai.api_key:
-            return JSONResponse(status_code=500, content={"error": "Chưa thiết lập OPENAI_API_KEY"})
+    review_text = response['choices'][0]['message']['content']
+    return {"review": review_text}
 
-        prompt = f"Viết một đánh giá 5 sao, thân thiện cho sản phẩm: {name}. Mô tả: {description}"
-
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        review_text = response['choic]()_
+# Chạy server với cổng 8080 (bắt buộc với Railway)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8080)
