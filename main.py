@@ -1,25 +1,33 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 import openai
 import os
 
 app = FastAPI()
 
+# Lấy API key từ biến môi trường
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Khai báo schema cho dữ liệu đầu vào
-class ProductInfo(BaseModel):
-    name: str
-    description: str
-
-# API với input kiểu ProductInfo
 @app.post("/generate-review")
-async def generate_review(data: ProductInfo):
-    prompt = f"Viết một đánh giá 5 sao, thân thiện cho sản phẩm: {data.name}. Mô tả: {data.description}"
+async def generate_review(req: Request):
+    try:
+        data = await req.json()
+        name = data.get("name")
+        description = data.get("description")
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
-    )
+        # Kiểm tra dữ liệu đầu vào
+        if not name or not description:
+            return JSONResponse(status_code=400, content={"error": "Thiếu tên hoặc mô tả sản phẩm"})
 
-    return {"review": response['choices'][0]['message']['content']}
+        # Kiểm tra API key
+        if not openai.api_key:
+            return JSONResponse(status_code=500, content={"error": "Chưa thiết lập OPENAI_API_KEY"})
+
+        prompt = f"Viết một đánh giá 5 sao, thân thiện cho sản phẩm: {name}. Mô tả: {description}"
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        review_text = response['choic]()_
